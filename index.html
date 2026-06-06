@@ -860,11 +860,7 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_
   maxZoom: 9,
 }).addTo(map);
 
-// Top overlay — CartoDB light labels (only place names, transparent)
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd', maxZoom: 9, opacity: 0.55,
-}).addTo(map);
+// No modern labels — pure terrain only
 
 // ================================================================
 // HISTORICAL ADMINISTRATIVE DIVISIONS (州) PER REGIME
