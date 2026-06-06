@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五胡乱华时期势力变化图 (304-439)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #1a1a2e; overflow: hidden; height: 100vh; }
+
+#map { height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; z-index: 1; }
+
+/* Top bar */
+#header {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  background: linear-gradient(180deg, rgba(26,26,46,0.95) 60%, rgba(26,26,46,0) 100%);
+  padding: 12px 20px 24px;
+  pointer-events: none;
+}
+#header .title {
+  font-size: 22px; font-weight: bold; color: #f0e6d3;
+  text-shadow: 0 0 20px rgba(0,0,0,0.8);
+  letter-spacing: 2px;
+}
+#header .subtitle {
+  font-size: 13px; color: #c0b090; margin-top: 2px;
+}
+
+/* Info panel */
+#info-panel {
+  position: absolute; top: 100px; right: 16px; z-index: 10;
+  background: rgba(26,26,46,0.9); border: 1px solid rgba(240,230,211,0.2);
+  border-radius: 10px; padding: 16px; color: #f0e6d3;
+  width: 260px; font-size: 13px; backdrop-filter: blur(10px);
+  max-height: calc(100vh - 280px); overflow-y: auto;
+}
+#info-panel .year-display { font-size: 36px; font-weight: bold; color: #f0c060; text-align: center; margin-bottom: 4px; }
+#info-panel .dynasty { text-align: center; font-size: 12px; color: #a09080; margin-bottom: 10px; }
+#info-panel .events { font-size: 12px; line-height: 1.6; }
+#info-panel .event { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+#info-panel .event .yr { color: #f0c060; font-weight: bold; }
+
+/* Legend */
+#legend {
+  position: absolute; left: 16px; top: 100px; z-index: 10;
+  background: rgba(26,26,46,0.9); border: 1px solid rgba(240,230,211,0.2);
+  border-radius: 10px; padding: 12px; color: #f0e6d3;
+  width: 220px; font-size: 12px; backdrop-filter: blur(10px);
+  max-height: calc(100vh - 280px); overflow-y: auto;
+}
+#legend h3 { font-size: 14px; margin-bottom: 8px; color: #f0c060; }
+#legend .regime-item { display: flex; align-items: center; padding: 3px 0; cursor: pointer; border-radius: 4px; padding: 3px 6px; transition: background 0.2s; }
+#legend .regime-item:hover { background: rgba(255,255,255,0.08); }
+#legend .regime-item.highlight { background: rgba(255,255,255,0.15); }
+#legend .color-box { width: 16px; height: 16px; border-radius: 3px; margin-right: 8px; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0; }
+#legend .regime-info { flex: 1; min-width: 0; }
+#legend .regime-name { font-weight: bold; }
+#legend .regime-detail { font-size: 10px; color: #a09080; }
+#legend .regime-ruler { font-size: 10px; color: #c0b090; }
+
+/* Controls */
+#controls {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+  background: linear-gradient(0deg, rgba(26,26,46,0.95) 60%, rgba(26,26,46,0) 100%);
+  padding: 24px 20px 16px;
+}
+#time-slider-container { display: flex; align-items: center; gap: 12px; }
+#year-label {
+  font-size: 20px; font-weight: bold; color: #f0c060; min-width: 50px; text-align: center;
+  text-shadow: 0 0 10px rgba(240,192,96,0.4);
+}
+#time-slider {
+  flex: 1; -webkit-appearance: none; height: 6px;
+  background: linear-gradient(90deg, #8b0000, #cd5c5c, #daa520, #2e8b57, #4169e1, #8b4513);
+  border-radius: 3px; outline: none; cursor: pointer;
+}
+#time-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px;
+  border-radius: 50%; background: #f0c060; cursor: pointer;
+  box-shadow: 0 0 12px rgba(240,192,96,0.6); border: 2px solid #fff;
+}
+
+.btn-group { display: flex; gap: 6px; }
+.btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(240,230,211,0.3);
+  background: rgba(26,26,46,0.8); color: #f0e6d3; cursor: pointer;
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.btn:hover { background: rgba(240,192,96,0.3); border-color: #f0c060; }
+.btn.active { background: rgba(240,192,96,0.5); border-color: #f0c060; }
+#speed-label { font-size: 11px; color: #a09080; min-width: 40px; text-align: center; }
+
+/* Tooltip */
+#tooltip {
+  position: absolute; z-index: 20; pointer-events: none;
+  background: rgba(26,26,46,0.92); border: 1px solid #f0c060;
+  border-radius: 6px; padding: 8px 12px; color: #f0e6d3;
+  font-size: 13px; display: none; white-space: nowrap;
+}
+#tooltip .tt-name { font-size: 15px; font-weight: bold; color: #f0c060; }
+#tooltip .tt-detail { font-size: 11px; color: #c0b090; }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  #legend { width: 180px; left: 8px; top: 80px; font-size: 11px; padding: 8px; }
+  #info-panel { width: 200px; right: 8px; top: 80px; font-size: 11px; padding: 10px; }
+  #info-panel .year-display { font-size: 28px; }
+  #header .title { font-size: 18px; }
+}
+
+/* Leaflet overrides */
+.leaflet-control-zoom { margin-top: 70px !important; }
+.regime-label {
+  background: none; border: none; box-shadow: none;
+  font-size: 12px; font-weight: bold; color: #fff;
+  text-shadow: 0 0 6px #000, 0 0 6px #000; white-space: nowrap;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="header">
+  <div class="title">五胡乱华时期 · 势力范围变迁</div>
+  <div class="subtitle">Sixteen Kingdoms Period — Territorial Evolution (304–439 AD)</div>
+</div>
+
+<div id="info-panel">
+  <div class="year-display" id="year-display">304</div>
+  <div class="dynasty" id="dynasty-display">西晋末年</div>
+  <div class="events" id="events-display"></div>
+</div>
+
+<div id="legend">
+  <h3>🗺️ 政权图例</h3>
+  <div id="legend-list"></div>
+</div>
+
+<div id="tooltip"><div class="tt-name"></div><div class="tt-detail"></div></div>
+
+<div id="controls">
+  <div id="time-slider-container">
+    <span id="year-label">304</span>
+    <input type="range" id="time-slider" min="304" max="439" value="304" step="1">
+    <div class="btn-group">
+      <button class="btn" id="btn-prev" title="前一年">⏮</button>
+      <button class="btn" id="btn-play" title="播放/暂停">▶</button>
+      <button class="btn" id="btn-next" title="后一年">⏭</button>
+    </div>
+    <span id="speed-label">1x</span>
+  </div>
+  <div id="quick-jumps" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;justify-content:center;">
+    <span style="color:#a09080;font-size:11px;line-height:22px;">跳转:</span>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ============================================================
+// DATA: REGIME DEFINITIONS
+// ============================================================
+// Each regime: name, ethnicity, color, lifespan, capital, rulers, territorial phases
+// Territory polygons are arrays of [lng, lat] coordinate rings
+
+const REGIMES = {};
+
+// Helper to define a regime
+function defineRegime(id, data) {
+  REGIMES[id] = data;
+}
+
+// --- 东晋 (Eastern Jin) ---
+defineRegime('jin', {
+  name: '东晋',
+  ethnicity: '汉族',
+  color: '#2ecc71',
+  startYear: 317,
+  end: 420,
+  capital: [118.8, 32.05],
+  capitalName: '建康',
+  rulers: [
+    { name: '司马睿', start: 317, end: 323 },
+    { name: '司马绍', start: 323, end: 325 },
+    { name: '司马衍', start: 325, end: 342 },
+    { name: '司马岳', start: 342, end: 344 },
+    { name: '司马聃', start: 344, end: 361 },
+    { name: '司马丕', start: 361, end: 365 },
+    { name: '司马奕', start: 365, end: 371 },
+    { name: '司马昱', start: 371, end: 372 },
+    { name: '司马曜', start: 372, end: 396 },
+    { name: '司马德宗', start: 396, end: 418 },
+    { name: '司马德文', start: 418, end: 420 },
+  ],
+  phases: [
+    {
+      start: 317, end: 329,
+      territory: [
+        // South of Yangtze + parts of central China
+        [[105, 28], [121, 28.5], [122, 30], [122, 33], [118, 33.5], [116, 33], [112, 33],
+         [110, 32], [109, 30], [106, 28], [105, 28]]
+      ]
+    },
+    {
+      start: 329, end: 347,
+      territory: [
+        [[105, 28], [121, 28.5], [122, 34], [120, 34.5], [116, 34], [114, 33.5],
+         [112, 33], [110, 31.5], [109, 30], [106, 28], [105, 28]]
+      ]
+    },
+    {
+      start: 347, end: 373,
+      territory: [
+        [[104, 28], [121, 28], [122, 34], [121, 35], [117, 35], [115, 34.5],
+         [112, 33], [110, 32], [108, 31], [106, 29], [104, 28]]
+      ]
+    },
+    {
+      start: 373, end: 383,
+      territory: [
+        [[105, 28], [121, 28.5], [122, 34], [120, 34.5], [116, 34], [114, 33.5],
+         [112, 33], [110, 31.5], [109, 30], [106, 28], [105, 28]]
+      ]
+    },
+    {
+      start: 383, end: 404,
+      territory: [
+        [[105, 28], [121, 28], [122, 34], [120, 34.5], [117, 35], [115, 35],
+         [114, 33.5], [112, 33], [110, 31], [108, 29.5], [105, 28]]
+      ]
+    },
+    {
+      start: 404, end: 420,
+      territory: [
+        [[105, 28], [121, 28], [122, 34], [121, 35], [118, 35.5], [116, 35],
+         [114, 34], [112.5, 33], [111, 32], [109, 30], [106, 28.5], [105, 28]]
+      ]
+    },
+  ]
+});
+
+// --- 汉赵/前赵 (Han Zhao / Former Zhao) ---
+defineRegime('hanzhao', {
+  name: '汉赵',
+  ethnicity: '匈奴',
+  color: '#e74c3c',
+  startYear: 304, end: 329,
+  capital: [111.5, 36.1],
+  capitalName: '平阳→长安',
+  rulers: [
+    { name: '刘渊', start: 304, end: 310 },
+    { name: '刘聪', start: 310, end: 318 },
+    { name: '刘曜', start: 318, end: 329 },
+  ],
+  phases: [
+    {
+      start: 304, end: 308,
+      territory: [
+        [[110.5, 35.7], [113.2, 35.7], [113.5, 37.2], [111.3, 37.6], [110.3, 36.5], [110.5, 35.7]]
+      ]
+    },
+    {
+      start: 308, end: 311,
+      territory: [
+        [[110, 35], [113.5, 35], [114, 37.8], [111, 38], [110, 37], [110, 35]],
+        [[110.5, 34.2], [113, 34.2], [113.2, 35.5], [110.5, 35.5], [110.5, 34.2]]
+      ]
+    },
+    {
+      start: 311, end: 316,
+      territory: [
+        [[109, 34], [114.5, 34], [115, 38], [110.5, 38.5], [109.5, 37], [108.5, 35.5], [109, 34]],
+        [[108, 33.5], [112, 33.5], [112.5, 35], [108, 35], [108, 33.5]]
+      ]
+    },
+    {
+      start: 316, end: 319,
+      territory: [
+        [[107, 33.5], [114.5, 33.5], [115, 38], [110.5, 38.5], [109, 37.5], [107, 36], [107, 33.5]],
+        [[106.5, 33], [111.5, 33], [111.5, 35], [106.5, 35], [106.5, 33]]
+      ]
+    },
+    {
+      start: 319, end: 325,
+      territory: [
+        [[106.5, 33.5], [112, 33.5], [112.5, 37], [110, 37.5], [108, 37], [106.5, 35.5], [106.5, 33.5]]
+      ]
+    },
+    {
+      start: 325, end: 329,
+      territory: [
+        [[106.5, 33.8], [110.5, 33.8], [111, 36.5], [108.5, 37], [106.5, 35.5], [106.5, 33.8]]
+      ]
+    },
+  ]
+});
+
+// --- 后赵 (Later Zhao) ---
+defineRegime('houzhao', {
+  name: '后赵',
+  ethnicity: '羯族',
+  color: '#c0392b',
+  startYear: 319, end: 351,
+  capital: [114.5, 37.1],
+  capitalName: '襄国→邺城',
+  rulers: [
+    { name: '石勒', start: 319, end: 333 },
+    { name: '石弘', start: 333, end: 334 },
+    { name: '石虎', start: 334, end: 349 },
+    { name: '石世', start: 349, end: 349 },
+    { name: '石遵', start: 349, end: 349 },
+    { name: '石鉴', start: 349, end: 350 },
+    { name: '石祗', start: 350, end: 351 },
+  ],
+  phases: [
+    {
+      start: 319, end: 325,
+      territory: [
+        [[113, 35], [118, 35], [118.5, 38], [115, 39], [113.5, 38.5], [113, 35]]
+      ]
+    },
+    {
+      start: 325, end: 329,
+      territory: [
+        [[112, 34], [118.5, 34], [119, 38.5], [115.5, 39.5], [113, 38.5], [112, 34]]
+      ]
+    },
+    {
+      start: 329, end: 338,
+      territory: [
+        [[106, 33], [119, 33], [122, 37], [120, 40], [116, 40.5], [112, 41],
+         [108, 40], [106, 37.5], [105, 35.5], [106, 33]]
+      ]
+    },
+    {
+      start: 338, end: 349,
+      territory: [
+        [[105, 33], [120, 33], [122.5, 37.5], [120.5, 40.5], [116, 41],
+         [112, 41.5], [108, 40.5], [106, 38], [105, 35.5], [105, 33]]
+      ]
+    },
+    {
+      start: 349, end: 351,
+      territory: [
+        [[111, 34], [118, 34], [119, 38], [114, 39], [111, 38], [111, 34]]
+      ]
+    },
+  ]
+});
+
+// --- 前燕 (Former Yan) ---
+defineRegime('qianyan', {
+  name: '前燕',
+  ethnicity: '鲜卑',
+  color: '#3498db',
+  startYear: 337, end: 370,
+  capital: [120.4, 41.6],
+  capitalName: '龙城→蓟→邺城',
+  rulers: [
+    { name: '慕容皝', start: 337, end: 348 },
+    { name: '慕容儁', start: 348, end: 360 },
+    { name: '慕容暐', start: 360, end: 370 },
+  ],
+  phases: [
+    {
+      start: 337, end: 349,
+      territory: [
+        [[119, 40], [123.5, 40], [124, 43], [119.5, 43.5], [117, 42], [119, 40]]
+      ]
+    },
+    {
+      start: 349, end: 352,
+      territory: [
+        [[115.5, 38], [123.5, 38], [124, 43.5], [117, 44], [115, 41], [115.5, 38]]
+      ]
+    },
+    {
+      start: 352, end: 357,
+      territory: [
+        [[112, 34], [122, 34], [124, 43.5], [117, 44], [114, 42],
+         [111.5, 39.5], [111, 37], [112, 34]]
+      ]
+    },
+    {
+      start: 357, end: 365,
+      territory: [
+        [[110, 33], [122, 33], [124, 43.5], [116, 44], [112, 42],
+         [109.5, 39], [109, 36], [110, 33]]
+      ]
+    },
+    {
+      start: 365, end: 370,
+      territory: [
+        [[109.5, 32.5], [122, 32.5], [124, 43.5], [116, 44], [112, 41.5],
+         [109, 39], [108.5, 36], [109.5, 32.5]]
+      ]
+    },
+  ]
+});
+
+// --- 前秦 (Former Qin) ---
+defineRegime('qianqin', {
+  name: '前秦',
+  ethnicity: '氐族',
+  color: '#f39c12',
+  startYear: 350, end: 394,
+  capital: [108.9, 34.3],
+  capitalName: '长安',
+  rulers: [
+    { name: '苻洪', start: 350, end: 350 },
+    { name: '苻健', start: 350, end: 355 },
+    { name: '苻生', start: 355, end: 357 },
+    { name: '苻坚', start: 357, end: 385 },
+    { name: '苻丕', start: 385, end: 386 },
+    { name: '苻登', start: 386, end: 394 },
+  ],
+  phases: [
+    {
+      start: 350, end: 354,
+      territory: [
+        [[106.5, 33.5], [110.5, 33.5], [111, 36], [108.5, 36.5], [106.5, 35.5], [106.5, 33.5]]
+      ]
+    },
+    {
+      start: 354, end: 370,
+      territory: [
+        [[105.5, 33], [112, 33.5], [112.5, 37.5], [110, 38], [107, 37.5], [105.5, 35.5], [105.5, 33]]
+      ]
+    },
+    {
+      start: 370, end: 376,
+      territory: [
+        [[105, 32], [122, 32], [124, 43.5], [115, 44.5], [110, 43],
+         [106, 41], [104, 38], [104, 35], [105, 32]]
+      ]
+    },
+    {
+      start: 376, end: 383,
+      territory: [
+        [[94, 39], [104, 39], [104, 37], [104, 34], [104, 32],
+         [122, 32], [124, 43.5], [115, 44.5], [110, 43],
+         [106, 41.5], [94, 42], [94, 39]]
+      ]
+    },
+    {
+      start: 383, end: 385,
+      territory: [
+        [[105, 33], [118, 33], [119, 38], [115, 39.5], [111, 39],
+         [107.5, 37], [106, 34.5], [105, 33]]
+      ]
+    },
+    {
+      start: 385, end: 394,
+      territory: [
+        [[106, 34], [109.5, 34], [110, 36.5], [107.5, 37], [106, 35.5], [106, 34]]
+      ]
+    },
+  ]
+});
+
+// --- 后燕 (Later Yan) ---
+defineRegime('houyan', {
+  name: '后燕',
+  ethnicity: '鲜卑',
+  color: '#2980b9',
+  startYear: 384, end: 407,
+  capital: [114.6, 36.3],
+  capitalName: '中山→龙城',
+  rulers: [
+    { name: '慕容垂', start: 384, end: 396 },
+    { name: '慕容宝', start: 396, end: 398 },
+    { name: '慕容盛', start: 398, end: 401 },
+    { name: '慕容熙', start: 401, end: 407 },
+  ],
+  phases: [
+    {
+      start: 384, end: 390,
+      territory: [
+        [[113.5, 35.5], [118, 35.5], [119, 40], [114, 41], [113, 39], [113.5, 35.5]]
+      ]
+    },
+    {
+      start: 390, end: 394,
+      territory: [
+        [[112, 34], [118.5, 34], [119.5, 38], [121, 40.5], [117, 42],
+         [114, 41.5], [112, 39], [112, 37], [112, 34]]
+      ]
+    },
+    {
+      start: 394, end: 397,
+      territory: [
+        [[110.5, 33], [120, 33], [122.5, 38], [124, 43.5], [117, 44],
+         [114, 42], [111, 40], [110.5, 36], [110.5, 33]]
+      ]
+    },
+    {
+      start: 397, end: 401,
+      territory: [
+        [[114, 36], [119, 36.5], [120.5, 40], [121, 43], [117, 43.5],
+         [114.5, 41.5], [114, 38.5], [114, 36]]
+      ]
+    },
+    {
+      start: 401, end: 407,
+      territory: [
+        [[118, 40], [123, 40], [123.5, 43], [118.5, 43.5], [117, 41.5], [118, 40]]
+      ]
+    },
+  ]
+});
+
+// --- 后秦 (Later Qin) ---
+defineRegime('houqin', {
+  name: '后秦',
+  ethnicity: '羌族',
+  color: '#e67e22',
+  startYear: 384, end: 417,
+  capital: [108.9, 34.3],
+  capitalName: '长安',
+  rulers: [
+    { name: '姚苌', start: 384, end: 393 },
+    { name: '姚兴', start: 394, end: 416 },
+    { name: '姚泓', start: 416, end: 417 },
+  ],
+  phases: [
+    {
+      start: 384, end: 394,
+      territory: [
+        [[106.5, 33.5], [110, 33.5], [110.5, 36], [108, 36.5], [106.5, 35], [106.5, 33.5]]
+      ]
+    },
+    {
+      start: 394, end: 403,
+      territory: [
+        [[105, 33], [112, 33], [113, 37.5], [109.5, 38], [107, 37.5], [105, 35.5], [105, 33]]
+      ]
+    },
+    {
+      start: 403, end: 410,
+      territory: [
+        [[105, 32.5], [114, 32.5], [114.5, 38], [110, 38.5], [107.5, 37.5],
+         [106.5, 36], [105, 35], [105, 32.5]]
+      ]
+    },
+    {
+      start: 410, end: 417,
+      territory: [
+        [[106, 33.5], [111, 33.5], [111.5, 37], [108, 37.5], [106.5, 35.5], [106, 33.5]]
+      ]
+    },
+  ]
+});
+
+// --- 前凉 (Former Liang) ---
+defineRegime('qianliang', {
+  name: '前凉',
+  ethnicity: '汉族',
+  color: '#1abc9c',
+  startYear: 320, end: 376,
+  capital: [102.6, 37.9],
+  capitalName: '姑臧',
+  rulers: [
+    { name: '张寔', start: 320, end: 324 },
+    { name: '张骏', start: 324, end: 346 },
+    { name: '张重华', start: 346, end: 353 },
+    { name: '张祚', start: 354, end: 355 },
+    { name: '张玄靓', start: 355, end: 363 },
+    { name: '张天锡', start: 363, end: 376 },
+  ],
+  phases: [
+    {
+      start: 320, end: 335,
+      territory: [
+        [[102, 37], [104, 37], [104, 39], [102, 39.5], [102, 37]],
+        [[100, 39], [102.5, 39.5], [102, 41], [100, 41], [100, 39]]
+      ]
+    },
+    {
+      start: 335, end: 353,
+      territory: [
+        [[100, 36.5], [105, 36.5], [105.5, 40.5], [100, 41.5], [98, 41], [98, 39], [100, 36.5]],
+        [[94, 39], [100, 39], [100, 41.5], [94, 42], [94, 39]]
+      ]
+    },
+    {
+      start: 353, end: 366,
+      territory: [
+        [[101, 36.5], [105.5, 36.5], [105.5, 40.5], [98, 41.5], [98, 39], [101, 36.5]]
+      ]
+    },
+    {
+      start: 366, end: 376,
+      territory: [
+        [[101, 37], [104.5, 37], [105, 40], [100, 40.5], [99, 38], [101, 37]]
+      ]
+    },
+  ]
+});
+
+// --- 成汉 (Cheng Han) ---
+defineRegime('chenghan', {
+  name: '成汉',
+  ethnicity: '氐族',
+  color: '#f1c40f',
+  startYear: 304, end: 347,
+  capital: [104.07, 30.67],
+  capitalName: '成都',
+  rulers: [
+    { name: '李雄', start: 304, end: 334 },
+    { name: '李班', start: 334, end: 334 },
+    { name: '李期', start: 334, end: 338 },
+    { name: '李寿', start: 338, end: 343 },
+    { name: '李势', start: 343, end: 347 },
+  ],
+  phases: [
+    {
+      start: 304, end: 314,
+      territory: [
+        [[103.5, 29.5], [106.5, 29.5], [107, 32.5], [104.5, 33.5], [103, 32], [103.5, 29.5]]
+      ]
+    },
+    {
+      start: 314, end: 335,
+      territory: [
+        [[102, 28], [108, 28], [109.5, 32.5], [107, 33.5], [104.5, 33.5], [102.5, 32], [102, 28]],
+        [[102, 27], [107, 27], [107.5, 29], [102, 29], [102, 27]]
+      ]
+    },
+    {
+      start: 335, end: 347,
+      territory: [
+        [[102.5, 28.5], [108, 28.5], [109, 32.5], [106.5, 33.5], [104, 33], [102.5, 31.5], [102.5, 28.5]]
+      ]
+    },
+  ]
+});
+
+// --- 代国 (Dai) ---
+defineRegime('dai', {
+  name: '代国',
+  ethnicity: '鲜卑(拓跋)',
+  color: '#7f8c8d',
+  startYear: 315, end: 376,
+  capital: [111.8, 40.3],
+  capitalName: '盛乐',
+  rulers: [
+    { name: '拓跋猗卢', start: 315, end: 316 },
+    { name: '拓跋郁律', start: 316, end: 321 },
+    { name: '拓跋贺傉', start: 321, end: 325 },
+    { name: '拓跋纥那', start: 325, end: 329 },
+    { name: '拓跋翳槐', start: 329, end: 338 },
+    { name: '拓跋什翼犍', start: 338, end: 376 },
+  ],
+  phases: [
+    {
+      start: 315, end: 338,
+      territory: [
+        [[110, 39.5], [114.5, 39.5], [115, 41.5], [111, 42], [109.5, 41], [110, 39.5]]
+      ]
+    },
+    {
+      start: 338, end: 360,
+      territory: [
+        [[109, 39], [115, 39], [116, 42.5], [110, 43.5], [109, 41.5], [109, 39]]
+      ]
+    },
+    {
+      start: 360, end: 376,
+      territory: [
+        [[108, 38.5], [115.5, 38.5], [116.5, 43], [109.5, 44], [107, 41.5], [108, 38.5]]
+      ]
+    },
+  ]
+});
+
+// --- 后凉 (Later Liang) ---
+defineRegime('houliang', {
+  name: '后凉',
+  ethnicity: '氐族',
+  color: '#16a085',
+  startYear: 386, end: 403,
+  capital: [102.6, 37.9],
+  capitalName: '姑臧',
+  rulers: [
+    { name: '吕光', start: 386, end: 399 },
+    { name: '吕绍', start: 399, end: 399 },
+    { name: '吕纂', start: 399, end: 401 },
+    { name: '吕隆', start: 401, end: 403 },
+  ],
+  phases: [
+    {
+      start: 386, end: 395,
+      territory: [
+        [[100, 36.5], [105.5, 36.5], [106, 40.5], [98.5, 42], [98, 40], [99, 38], [100, 36.5]]
+      ]
+    },
+    {
+      start: 395, end: 401,
+      territory: [
+        [[100, 36], [106, 36], [106.5, 41], [98, 42], [98, 39.5], [100, 36]]
+      ]
+    },
+    {
+      start: 401, end: 403,
+      territory: [
+        [[101, 37], [104.5, 37], [105, 39.5], [100.5, 40], [100, 38], [101, 37]]
+      ]
+    },
+  ]
+});
+
+// --- 南凉 (Southern Liang) ---
+defineRegime('nanliang', {
+  name: '南凉',
+  ethnicity: '鲜卑(秃发)',
+  color: '#9b59b6',
+  startYear: 397, end: 414,
+  capital: [102.4, 36.5],
+  capitalName: '乐都→西平→姑臧',
+  rulers: [
+    { name: '秃发乌孤', start: 397, end: 399 },
+    { name: '秃发利鹿孤', start: 399, end: 402 },
+    { name: '秃发傉檀', start: 402, end: 414 },
+  ],
+  phases: [
+    {
+      start: 397, end: 402,
+      territory: [
+        [[101.5, 36], [103.5, 36], [104, 37.5], [102, 38], [101.5, 37], [101.5, 36]]
+      ]
+    },
+    {
+      start: 402, end: 408,
+      territory: [
+        [[101, 35.5], [104.5, 35.5], [105, 37.5], [103.5, 38.5], [101, 38], [101, 35.5]]
+      ]
+    },
+    {
+      start: 408, end: 414,
+      territory: [
+        [[101.5, 36], [103.5, 36], [104, 37], [102, 37.5], [101.5, 36]]
+      ]
+    },
+  ]
+});
+
+// --- 北凉 (Northern Liang) ---
+defineRegime('beiliang', {
+  name: '北凉',
+  ethnicity: '匈奴(卢水胡)',
+  color: '#8e44ad',
+  startYear: 397, end: 439,
+  capital: [100.5, 38.9],
+  capitalName: '张掖→姑臧',
+  rulers: [
+    { name: '段业', start: 397, end: 401 },
+    { name: '沮渠蒙逊', start: 401, end: 433 },
+    { name: '沮渠牧犍', start: 433, end: 439 },
+  ],
+  phases: [
+    {
+      start: 397, end: 401,
+      territory: [
+        [[99, 38.5], [101.5, 38.5], [101.5, 40], [99, 40.5], [99, 38.5]]
+      ]
+    },
+    {
+      start: 401, end: 412,
+      territory: [
+        [[98.5, 38], [102.5, 38], [103, 40.5], [98.5, 41], [98.5, 38]]
+      ]
+    },
+    {
+      start: 412, end: 421,
+      territory: [
+        [[98.5, 37.5], [103, 37.5], [103.5, 40.5], [98.5, 41], [98.5, 37.5]]
+      ]
+    },
+    {
+      start: 421, end: 433,
+      territory: [
+        [[96, 37], [104, 37], [104.5, 41], [96, 42], [96, 37]]
+      ]
+    },
+    {
+      start: 433, end: 439,
+      territory: [
+        [[97, 37.5], [103.5, 37.5], [104, 40.5], [98, 41.5], [97, 40], [97, 37.5]]
+      ]
+    },
+  ]
+});
+
+// --- 西凉 (Western Liang) ---
+defineRegime('xiliang', {
+  name: '西凉',
+  ethnicity: '汉族',
+  color: '#27ae60',
+  startYear: 400, end: 421,
+  capital: [94.7, 40.1],
+  capitalName: '敦煌→酒泉',
+  rulers: [
+    { name: '李暠', start: 400, end: 417 },
+    { name: '李歆', start: 417, end: 420 },
+    { name: '李恂', start: 420, end: 421 },
+  ],
+  phases: [
+    {
+      start: 400, end: 405,
+      territory: [
+        [[93.5, 39.5], [97.5, 39.5], [97.5, 41], [93.5, 41], [93.5, 39.5]]
+      ]
+    },
+    {
+      start: 405, end: 421,
+      territory: [
+        [[94.5, 39], [99, 39], [99.5, 40.5], [97, 41.5], [94.5, 41.5], [94.5, 39]]
+      ]
+    },
+  ]
+});
+
+// --- 南燕 (Southern Yan) ---
+defineRegime('nanyan', {
+  name: '南燕',
+  ethnicity: '鲜卑',
+  color: '#2e86c1',
+  startYear: 398, end: 410,
+  capital: [118.5, 36.7],
+  capitalName: '广固',
+  rulers: [
+    { name: '慕容德', start: 398, end: 405 },
+    { name: '慕容超', start: 405, end: 410 },
+  ],
+  phases: [
+    {
+      start: 398, end: 403,
+      territory: [
+        [[117, 35], [122, 35.5], [122.5, 37.5], [118, 38], [116.5, 36.5], [117, 35]]
+      ]
+    },
+    {
+      start: 403, end: 410,
+      territory: [
+        [[117, 35], [122, 35.5], [122, 37], [118.5, 37.5], [117, 37], [117, 35]]
+      ]
+    },
+  ]
+});
+
+// --- 北燕 (Northern Yan) ---
+defineRegime('beiyan', {
+  name: '北燕',
+  ethnicity: '汉族',
+  color: '#117864',
+  startYear: 407, end: 436,
+  capital: [120.4, 41.6],
+  capitalName: '龙城',
+  rulers: [
+    { name: '高云', start: 407, end: 409 },
+    { name: '冯跋', start: 409, end: 430 },
+    { name: '冯弘', start: 430, end: 436 },
+  ],
+  phases: [
+    {
+      start: 407, end: 436,
+      territory: [
+        [[118.5, 40], [123, 40], [123.5, 43], [118, 43.5], [117.5, 41.5], [118.5, 40]]
+      ]
+    },
+  ]
+});
+
+// --- 胡夏 (Hu Xia / Da Xia) ---
+defineRegime('huxia', {
+  name: '胡夏',
+  ethnicity: '匈奴(铁弗)',
+  color: '#d35400',
+  startYear: 407, end: 431,
+  capital: [108.8, 37.6],
+  capitalName: '统万城→长安',
+  rulers: [
+    { name: '赫连勃勃', start: 407, end: 425 },
+    { name: '赫连昌', start: 425, end: 428 },
+    { name: '赫连定', start: 428, end: 431 },
+  ],
+  phases: [
+    {
+      start: 407, end: 417,
+      territory: [
+        [[107, 37], [110.5, 37.5], [111, 40], [106.5, 40.5], [106, 38.5], [107, 37]]
+      ]
+    },
+    {
+      start: 417, end: 423,
+      territory: [
+        [[106, 34], [111, 34], [111.5, 37], [112, 40], [107, 41], [106, 38], [106, 34]]
+      ]
+    },
+    {
+      start: 423, end: 428,
+      territory: [
+        [[105.5, 33.5], [111.5, 33.5], [112, 40.5], [107, 41], [106.5, 35.5], [105.5, 33.5]]
+      ]
+    },
+    {
+      start: 428, end: 431,
+      territory: [
+        [[106, 35], [110, 35.5], [110, 38], [106.5, 38.5], [106, 36.5], [106, 35]]
+      ]
+    },
+  ]
+});
+
+// --- 西秦 (Western Qin) ---
+defineRegime('xiqin', {
+  name: '西秦',
+  ethnicity: '鲜卑(乞伏)',
+  color: '#d68910',
+  startYear: 385, end: 431,
+  capital: [103.8, 36.1],
+  capitalName: '金城→苑川→枹罕',
+  rulers: [
+    { name: '乞伏国仁', start: 385, end: 388 },
+    { name: '乞伏乾归', start: 388, end: 412 },
+    { name: '乞伏炽磐', start: 412, end: 428 },
+    { name: '乞伏暮末', start: 428, end: 431 },
+  ],
+  phases: [
+    {
+      start: 385, end: 400,
+      territory: [
+        [[103, 35], [106, 35], [106.5, 37], [104, 37.5], [103, 36.5], [103, 35]]
+      ]
+    },
+    {
+      start: 409, end: 414,
+      territory: [
+        [[103.5, 35], [106.5, 35], [107, 36.5], [104.5, 37], [103.5, 36], [103.5, 35]]
+      ]
+    },
+    {
+      start: 414, end: 428,
+      territory: [
+        [[102.5, 34.5], [107, 34.5], [107.5, 37.5], [105, 38], [103, 37.5],
+         [102, 36.5], [102.5, 34.5]]
+      ]
+    },
+    {
+      start: 428, end: 431,
+      territory: [
+        [[103, 35], [106, 35.5], [106, 37], [103.5, 37], [103, 36], [103, 35]]
+      ]
+    },
+  ]
+});
+
+// --- 北魏 (Northern Wei) ---
+defineRegime('beiwei', {
+  name: '北魏',
+  ethnicity: '鲜卑(拓跋)',
+  color: '#5d6d7e',
+  startYear: 386, end: 439,
+  capital: [111.8, 40.3],
+  capitalName: '盛乐→平城',
+  rulers: [
+    { name: '拓跋珪', start: 386, end: 409 },
+    { name: '拓跋嗣', start: 409, end: 423 },
+    { name: '拓跋焘', start: 423, end: 439 },
+  ],
+  phases: [
+    {
+      start: 386, end: 396,
+      territory: [
+        [[109, 39], [114, 39.5], [115, 42], [110, 43], [109, 41], [109, 39]]
+      ]
+    },
+    {
+      start: 396, end: 398,
+      territory: [
+        [[109, 38], [116, 38], [117, 42.5], [110, 43.5], [108.5, 41], [109, 38]]
+      ]
+    },
+    {
+      start: 398, end: 409,
+      territory: [
+        [[108.5, 37.5], [117, 37.5], [118.5, 43], [110, 44], [108, 41.5], [108.5, 37.5]]
+      ]
+    },
+    {
+      start: 409, end: 423,
+      territory: [
+        [[107.5, 37], [118, 37], [119, 43.5], [109.5, 44.5], [107, 42], [107.5, 37]]
+      ]
+    },
+    {
+      start: 423, end: 431,
+      territory: [
+        [[106.5, 36.5], [118.5, 36.5], [119.5, 44], [109, 45], [106, 42.5], [106.5, 36.5]]
+      ]
+    },
+    {
+      start: 431, end: 436,
+      territory: [
+        [[106, 35], [121, 35], [121.5, 44], [109, 45], [105.5, 42], [105.5, 38], [106, 35]]
+      ]
+    },
+    {
+      start: 436, end: 439,
+      territory: [
+        [[105, 34], [121, 34.5], [124, 44], [109, 45], [105, 42], [104, 38.5],
+         [104, 36], [105, 34]]
+      ]
+    },
+  ]
+});
+
+// --- 西燕 (Western Yan) ---
+defineRegime('xiyan', {
+  name: '西燕',
+  ethnicity: '鲜卑',
+  color: '#85c1e9',
+  startYear: 384, end: 394,
+  capital: [112.9, 36.1],
+  capitalName: '长子',
+  rulers: [
+    { name: '慕容泓', start: 384, end: 384 },
+    { name: '慕容冲', start: 384, end: 386 },
+    { name: '慕容永', start: 386, end: 394 },
+  ],
+  phases: [
+    {
+      start: 384, end: 386,
+      territory: [
+        [[108.5, 34.2], [111, 34.2], [111.5, 35.5], [109.5, 36], [108.5, 35], [108.5, 34.2]]
+      ]
+    },
+    {
+      start: 386, end: 394,
+      territory: [
+        [[110.5, 35], [113.5, 35], [114, 37.5], [111, 38], [110, 36.5], [110.5, 35]]
+      ]
+    },
+  ]
+});
+
+// --- 冉魏 (Ran Wei) ---
+defineRegime('ranwei', {
+  name: '冉魏',
+  ethnicity: '汉族',
+  color: '#e74c3c',
+  startYear: 350, end: 352,
+  capital: [114.6, 36.3],
+  capitalName: '邺城',
+  rulers: [
+    { name: '冉闵', start: 350, end: 352 },
+  ],
+  phases: [
+    {
+      start: 350, end: 352,
+      territory: [
+        [[113, 35], [118, 35], [118.5, 37.5], [114, 38.5], [113, 36.5], [113, 35]]
+      ]
+    },
+  ]
+});
+
+// --- 翟魏 (Zhai Wei) ---
+defineRegime('zhaiwei', {
+  name: '翟魏',
+  ethnicity: '丁零',
+  color: '#aab7b8',
+  startYear: 388, end: 392,
+  capital: [114.3, 35.7],
+  capitalName: '滑台',
+  rulers: [
+    { name: '翟辽', start: 388, end: 391 },
+    { name: '翟钊', start: 391, end: 392 },
+  ],
+  phases: [
+    {
+      start: 388, end: 392,
+      territory: [
+        [[113.5, 34.5], [115.5, 34.5], [115.5, 36.5], [113.5, 36.5], [113.5, 34.5]]
+      ]
+    },
+  ]
+});
+
+// ============================================================
+// KEY HISTORICAL EVENTS FOR THE INFO PANEL
+// ============================================================
+const EVENTS = [
+  { year: 304, text: '刘渊称汉王，建立汉赵政权；李雄称成都王，建立成汉。五胡乱华开始。' },
+  { year: 308, text: '刘渊称帝，迁都平阳。汉赵势力迅速扩张。' },
+  { year: 310, text: '刘渊病逝，刘聪即位。汉赵攻陷洛阳外围。' },
+  { year: 311, text: '永嘉之乱：汉赵刘曜攻陷洛阳，俘晋怀帝。' },
+  { year: 313, text: '晋愍帝在长安即位。祖逖北伐。' },
+  { year: 315, text: '拓跋猗卢被封为代王，建立代国。' },
+  { year: 316, text: '汉赵刘曜攻陷长安，西晋灭亡。' },
+  { year: 317, text: '司马睿在建康称晋王，次年称帝，东晋建立。' },
+  { year: 319, text: '石勒称赵王，建立后赵；刘曜改国号为赵（前赵）。' },
+  { year: 320, text: '张寔遇刺，张骏继位，前凉事实独立。' },
+  { year: 329, text: '后赵石勒灭前赵，统一北方大部。' },
+  { year: 333, text: '石勒病逝，石虎篡位。后赵进入高压统治期。' },
+  { year: 337, text: '慕容皝称燕王，建立前燕。' },
+  { year: 347, text: '东晋桓温灭成汉，收复蜀地。' },
+  { year: 349, text: '石虎病逝，后赵大乱。冉闵开始掌权。' },
+  { year: 350, text: '冉闵称帝，建立冉魏；苻洪占据关中，前秦肇始。' },
+  { year: 352, text: '前燕慕容儁灭冉魏，势力进入中原。苻健称帝，前秦正式建立。' },
+  { year: 354, text: '东晋桓温北伐前秦，兵至灞上，后因粮尽退兵。' },
+  { year: 357, text: '苻坚即位，王猛辅政，前秦开始崛起。' },
+  { year: 369, text: '东晋桓温北伐前燕，先胜后败于枋头。' },
+  { year: 370, text: '前秦王猛灭前燕，统一北方东部。' },
+  { year: 373, text: '前秦攻取东晋梁州、益州（四川）。' },
+  { year: 376, text: '前秦灭前凉、代国，完全统一北方。苻坚达到鼎盛。' },
+  { year: 378, text: '前秦围攻襄阳，一年后攻陷。' },
+  { year: 383, text: '淝水之战：东晋谢安大败前秦苻坚。前秦帝国开始崩溃。' },
+  { year: 384, text: '慕容垂建立后燕；姚苌建立后秦；慕容泓建立西燕。北方再次分裂。' },
+  { year: 385, text: '苻坚被姚苌所杀。乞伏国仁建立西秦。' },
+  { year: 386, text: '拓跋珪重建代国，改国号为魏（北魏）。吕光建立后凉。' },
+  { year: 394, text: '后燕灭西燕；前秦灭亡。' },
+  { year: 395, text: '参合陂之战：北魏大败后燕，后燕开始衰落。' },
+  { year: 397, text: '秃发乌孤建立南凉；沮渠蒙逊拥段业建立北凉。' },
+  { year: 398, text: '慕容德建立南燕于山东。北魏迁都平城。' },
+  { year: 400, text: '李暠建立西凉。西秦被后秦所灭（后于409年复国）。' },
+  { year: 403, text: '后凉降于后秦。' },
+  { year: 407, text: '赫连勃勃建立胡夏；冯跋建立北燕。' },
+  { year: 409, text: '西秦复国。' },
+  { year: 410, text: '东晋刘裕灭南燕。' },
+  { year: 414, text: '西秦灭南凉。' },
+  { year: 417, text: '刘裕灭后秦，收复长安，但旋即南归，关中为胡夏所得。' },
+  { year: 420, text: '刘裕篡晋，建立刘宋。南朝开始。' },
+  { year: 421, text: '北凉灭西凉。' },
+  { year: 423, text: '北魏攻取刘宋洛阳、虎牢等地。' },
+  { year: 426, text: '北魏开始大规模进攻胡夏。' },
+  { year: 427, text: '北魏攻占胡夏都城统万城。' },
+  { year: 431, text: '胡夏灭西秦；吐谷浑灭胡夏。' },
+  { year: 436, text: '北魏灭北燕。' },
+  { year: 439, text: '北魏灭北凉，统一北方。五胡乱华时期结束，南北朝正式开始。' },
+];
+
+// ============================================================
+// APPLICATION LOGIC
+// ============================================================
+
+// Initialize map
+const map = L.map('map', {
+  center: [36.5, 112],
+  zoom: 5,
+  minZoom: 4,
+  maxZoom: 8,
+  zoomControl: true,
+  attributionControl: false,
+});
+
+// Base tile layer - use CartoDB positron for a clean, modern-country-free look
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 8,
+}).addTo(map);
+
+// Alternative: terrain-style map (uncomment to use)
+/*
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Esri',
+  maxZoom: 8,
+}).addTo(map);
+*/
+
+// Modern China boundary reference (subtle)
+const modernChinaBoundary = L.geoJSON(null, {
+  style: { color: '#666', weight: 0.5, opacity: 0.3, fill: false, dashArray: '4,8' },
+  interactive: false,
+});
+
+// Major rivers for reference (Leaflet uses [lat, lng] for polylines)
+function addRiverLine(coords, name, color, weight) {
+  // Convert [lng, lat] to [lat, lng] for Leaflet polyline
+  const swapped = coords.map(([lng, lat]) => [lat, lng]);
+  L.polyline(swapped, {
+    color: color || '#4a90d9', weight: weight || 2, opacity: 0.5, interactive: false,
+  }).addTo(map);
+  // Add river name label at midpoint
+  const mid = swapped[Math.floor(swapped.length / 2)];
+  if (name) {
+    L.marker(mid, {
+      icon: L.divIcon({
+        className: 'regime-label',
+        html: `<div style="color:#5ba0e0;font-size:11px;font-style:italic;text-shadow:0 0 4px #000;">${name}</div>`,
+        iconSize: [60, 16],
+        iconAnchor: [30, 8],
+      }),
+      interactive: false,
+    }).addTo(map);
+  }
+}
+
+// Yellow River (approximate course) - [lng, lat]
+const yellowRiver = [
+  [102, 36.0], [104, 36.2], [106, 37.5], [107.5, 40.3], [109, 40.5],
+  [111, 40.0], [112, 39.5], [114.5, 40.3], [116, 38.2],
+  [117.5, 37.0], [119, 35.0], [116.5, 34.5], [113.5, 34.8],
+  [112.5, 34.5], [113, 34.8], [116, 35.8], [118, 37.5], [119, 38]
+];
+addRiverLine(yellowRiver, '黄河', '#4a90d9', 2.5);
+
+// Yangtze River (approximate) - [lng, lat]
+const yangtzeRiver = [
+  [104, 28.5], [106, 29.8], [108.5, 30.8], [110.5, 31.0], [111.5, 30.2],
+  [113, 30.0], [114.5, 29.8], [116, 30.2], [117.5, 31.8], [118.5, 32.0],
+  [119.5, 32.0], [121, 31.5], [122, 31.5]
+];
+addRiverLine(yangtzeRiver, '长江', '#4a90d9', 2.5);
+
+// Huai River (approximate) - [lng, lat]
+const huaiRiver = [
+  [113, 32.5], [114.5, 33.0], [116, 33.2], [117.5, 33.5], [118.5, 33.5], [119.5, 33.8], [121, 34.0]
+];
+addRiverLine(huaiRiver, '淮河', '#4a90d9', 1.5);
+
+// Store all GeoJSON layers on the map for each regime
+const regimeLayers = {}; // regimeId -> { polygon: L.geoJSON, capital: L.marker, label: L.marker }
+const currentYearData = {}; // regimeId -> currently displayed phase data
+
+// Tooltip element
+const tooltipEl = document.getElementById('tooltip');
+const ttName = tooltipEl.querySelector('.tt-name');
+const ttDetail = tooltipEl.querySelector('.tt-detail');
+
+function showTooltip(evt, regimeData) {
+  ttName.textContent = regimeData.name;
+  ttDetail.innerHTML = `民族: ${regimeData.ethnicity} | 统治者: ${regimeData.ruler}<br>都城: ${regimeData.capitalName}`;
+  tooltipEl.style.display = 'block';
+  tooltipEl.style.left = (evt.originalEvent.clientX + 18) + 'px';
+  tooltipEl.style.top = (evt.originalEvent.clientY - 30) + 'px';
+}
+
+function hideTooltip() {
+  tooltipEl.style.display = 'none';
+}
+
+function moveTooltip(evt) {
+  tooltipEl.style.left = (evt.originalEvent.clientX + 18) + 'px';
+  tooltipEl.style.top = (evt.originalEvent.clientY - 30) + 'px';
+}
+
+// Initialize regime layers on the map
+Object.keys(REGIMES).forEach(id => {
+  const r = REGIMES[id];
+  const geoJSONLayer = L.geoJSON(null, {
+    style: { color: r.color, weight: 1.5, fillColor: r.color, fillOpacity: 0.35 },
+    interactive: true,
+    onEachFeature: function(feature, layer) {
+      layer.on({
+        mouseover: function(e) {
+          const props = feature.properties;
+          showTooltip(e, {
+            name: props.name,
+            ethnicity: props.ethnicity,
+            ruler: props.ruler,
+            capitalName: props.capitalName,
+          });
+          layer.setStyle({ weight: 3, fillOpacity: 0.5 });
+        },
+        mouseout: function() {
+          hideTooltip();
+          const props = feature.properties;
+          layer.setStyle({
+            weight: 1.5, fillOpacity: 0.35,
+            color: props.color, fillColor: props.color,
+          });
+        },
+        mousemove: moveTooltip,
+        click: function() {
+          const bounds = layer.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7 });
+          }
+        },
+      });
+    },
+  });
+
+  const capitalMarker = L.circleMarker([0, 0], {
+    radius: 5, color: '#fff', weight: 2, fillColor: r.color, fillOpacity: 1,
+  });
+
+  const capitalLabelMarker = L.marker([0, 0], {
+    icon: L.divIcon({
+      className: 'regime-label',
+      html: `<div style="color:${r.color};font-size:11px;font-weight:bold;text-shadow:0 0 4px #000;">${r.capitalName}</div>`,
+      iconSize: [80, 20],
+      iconAnchor: [40, 25],
+    }),
+    interactive: false,
+  });
+
+  regimeLayers[id] = {
+    polygon: geoJSONLayer,
+    capital: capitalMarker,
+    capitalLabel: capitalLabelMarker,
+  };
+});
+
+// Function to get active regimes and their territories for a given year
+function getActiveRegimes(year) {
+  const active = [];
+  Object.entries(REGIMES).forEach(([id, regime]) => {
+    if (year < regime.startYear || year > regime.endYear) return;
+    // Find the appropriate phase
+    let activePhase = null;
+    for (const phase of regime.phases) {
+      if (year >= phase.start && year <= phase.end) {
+        activePhase = phase;
+        break;
+      }
+    }
+    if (activePhase) {
+      // Find the ruler for this year
+      let ruler = null;
+      for (const r of regime.rulers) {
+        if (year >= r.start && year <= r.end) {
+          ruler = r;
+          break;
+        }
+      }
+      active.push({
+        id,
+        name: regime.name,
+        ethnicity: regime.ethnicity,
+        color: regime.color,
+        capital: regime.capital,
+        capitalName: regime.capitalName,
+        ruler: ruler ? ruler.name : '—',
+        territory: activePhase.territory,
+      });
+    }
+  });
+  return active;
+}
+
+// Function to update the map display for a given year
+function updateMap(year) {
+  const active = getActiveRegimes(year);
+
+  // Build GeoJSON features
+  const features = [];
+  active.forEach(regime => {
+    // Each territory entry is an array of rings (first is outer, rest are holes)
+    regime.territory.forEach(ring => {
+      features.push({
+        type: 'Feature',
+        properties: {
+          regimeId: regime.id,
+          name: regime.name,
+          ethnicity: regime.ethnicity,
+          color: regime.color,
+          ruler: regime.ruler,
+          capitalName: regime.capitalName,
+        },
+        geometry: {
+          type: 'Polygon',
+          coordinates: [ring],
+        },
+      });
+    });
+  });
+
+  const geoJSON = { type: 'FeatureCollection', features };
+
+  // Update each regime layer
+  Object.keys(regimeLayers).forEach(id => {
+    const layer = regimeLayers[id];
+    const regimeFeatures = features.filter(f => f.properties.regimeId === id);
+
+    if (regimeFeatures.length > 0) {
+      const featureCollection = { type: 'FeatureCollection', features: regimeFeatures };
+      layer.polygon.clearLayers();
+      layer.polygon.addData(featureCollection);
+      layer.polygon.setStyle({
+        color: REGIMES[id].color,
+        weight: 1.5,
+        fillColor: REGIMES[id].color,
+        fillOpacity: 0.35,
+      });
+
+      // Update capital marker
+      const regData = active.find(a => a.id === id);
+      if (regData) {
+        layer.capital.setLatLng([regData.capital[1], regData.capital[0]]);
+        layer.capital.setStyle({ fillColor: regData.color, color: '#fff' });
+        layer.capital.unbindPopup();
+        layer.capital.bindPopup(
+          `<b>${regData.name}</b><br>都城: ${regData.capitalName}<br>统治者: ${regData.ruler}<br>民族: ${regData.ethnicity}`
+        );
+        layer.capital.on({
+          mouseover: function(e) {
+            showTooltip(e, {
+              name: regData.name,
+              ethnicity: regData.ethnicity,
+              ruler: regData.ruler,
+              capitalName: regData.capitalName,
+            });
+          },
+          mouseout: hideTooltip,
+          mousemove: moveTooltip,
+        });
+        if (!map.hasLayer(layer.capital)) layer.capital.addTo(map);
+
+        layer.capitalLabel.setLatLng([regData.capital[1] + 0.3, regData.capital[0]]);
+        layer.capitalLabel.setIcon(L.divIcon({
+          className: 'regime-label',
+          html: `<div style="font-size:10px;font-weight:bold;text-shadow:0 0 6px #000,0 0 6px #000;">${regData.name}</div>`,
+          iconSize: [80, 20],
+          iconAnchor: [40, 10],
+        }));
+        if (!map.hasLayer(layer.capitalLabel)) layer.capitalLabel.addTo(map);
+
+        if (!map.hasLayer(layer.polygon)) layer.polygon.addTo(map);
+      }
+    } else {
+      // Remove inactive regime layers
+      if (map.hasLayer(layer.polygon)) map.removeLayer(layer.polygon);
+      if (map.hasLayer(layer.capital)) map.removeLayer(layer.capital);
+      if (map.hasLayer(layer.capitalLabel)) map.removeLayer(layer.capitalLabel);
+    }
+  });
+
+  // Update legend
+  updateLegend(active);
+
+  // Update info panel
+  updateInfoPanel(year, active);
+
+  // Update year display
+  document.getElementById('year-label').textContent = year;
+  document.getElementById('year-display').textContent = year;
+
+  currentYearData.active = active;
+  currentYearData.year = year;
+}
+
+// Update legend
+function updateLegend(active) {
+  const list = document.getElementById('legend-list');
+  list.innerHTML = active.map(r => `
+    <div class="regime-item" data-regime="${r.id}"
+         onmouseenter="highlightRegime('${r.id}')"
+         onmouseleave="unhighlightRegime('${r.id}')"
+         onclick="zoomToRegime('${r.id}')"
+         title="点击聚焦此政权">
+      <div class="color-box" style="background:${r.color}"></div>
+      <div class="regime-info">
+        <div class="regime-name">${r.name}</div>
+        <div class="regime-detail">${r.ethnicity}</div>
+        <div class="regime-ruler">👤 ${r.ruler}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Zoom to a regime's territory
+function zoomToRegime(id) {
+  const layer = regimeLayers[id];
+  if (layer && map.hasLayer(layer.polygon)) {
+    const bounds = layer.polygon.getBounds();
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 7 });
+      // Flash effect
+      const origStyle = { weight: 3, fillOpacity: 0.55 };
+      layer.polygon.setStyle(origStyle);
+      setTimeout(() => {
+        layer.polygon.setStyle({ weight: 1.5, fillOpacity: 0.35 });
+      }, 1500);
+    }
+  }
+}
+window.zoomToRegime = zoomToRegime;
+
+// Update info panel
+function updateInfoPanel(year, active) {
+  const dynastyEl = document.getElementById('dynasty-display');
+  const eventsEl = document.getElementById('events-display');
+
+  // Determine the era
+  let dynasty = '';
+  if (year < 316) dynasty = '西晋末年';
+  else if (year < 329) dynasty = '两赵并立时期';
+  else if (year < 350) dynasty = '后赵称霸时期';
+  else if (year < 370) dynasty = '前燕·前秦对峙';
+  else if (year < 383) dynasty = '前秦统一北方';
+  else if (year < 394) dynasty = '前秦崩溃·群雄并起';
+  else if (year < 407) dynasty = '后燕·后秦·北魏争霸';
+  else if (year < 420) dynasty = '东晋末期·诸国混战';
+  else if (year < 439) dynasty = '刘宋初年·北魏扩张';
+  else dynasty = '北魏统一·南北朝开始';
+
+  dynastyEl.textContent = dynasty;
+
+  // Find relevant events
+  const yearEvents = EVENTS.filter(e => e.year === year);
+  const regimeCount = active.length;
+  const summary = `<div class="event">活跃政权: <b>${regimeCount}</b> 个</div>`;
+
+  eventsEl.innerHTML = summary + yearEvents.map(e =>
+    `<div class="event"><span class="yr">${e.year}</span> ${e.text}</div>`
+  ).join('');
+}
+
+// Highlight a regime on the map
+function highlightRegime(id) {
+  if (regimeLayers[id] && map.hasLayer(regimeLayers[id].polygon)) {
+    regimeLayers[id].polygon.setStyle({
+      weight: 3,
+      fillOpacity: 0.55,
+    });
+    regimeLayers[id].capital.setRadius(7);
+    // Highlight in legend
+    const item = document.querySelector(`.regime-item[data-regime="${id}"]`);
+    if (item) item.classList.add('highlight');
+  }
+}
+
+function unhighlightRegime(id) {
+  const r = REGIMES[id];
+  if (regimeLayers[id] && map.hasLayer(regimeLayers[id].polygon)) {
+    regimeLayers[id].polygon.setStyle({
+      weight: 1.5,
+      fillOpacity: 0.35,
+      color: r.color,
+      fillColor: r.color,
+    });
+    regimeLayers[id].capital.setRadius(5);
+    const item = document.querySelector(`.regime-item[data-regime="${id}"]`);
+    if (item) item.classList.remove('highlight');
+  }
+}
+
+// Make highlight functions global
+window.highlightRegime = highlightRegime;
+window.unhighlightRegime = unhighlightRegime;
+
+// Time slider
+const slider = document.getElementById('time-slider');
+let currentYear = 304;
+let isPlaying = false;
+let playSpeed = 1; // years per frame
+let animationId = null;
+let lastFrameTime = 0;
+const BASE_INTERVAL = 400; // ms per year at 1x speed
+
+// Add tick marks to slider
+const tickYears = [304, 316, 329, 337, 347, 350, 352, 370, 376, 383, 386, 394, 407, 417, 420, 431, 439];
+
+slider.addEventListener('input', () => {
+  currentYear = parseInt(slider.value);
+  updateMap(currentYear);
+});
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentYear > 304) {
+    currentYear--;
+    slider.value = currentYear;
+    updateMap(currentYear);
+  }
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (currentYear < 439) {
+    currentYear++;
+    slider.value = currentYear;
+    updateMap(currentYear);
+  }
+});
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  const btn = document.getElementById('btn-play');
+  if (isPlaying) {
+    stopPlayback();
+    btn.textContent = '▶';
+  } else {
+    startPlayback();
+    btn.textContent = '⏸';
+  }
+});
+
+function startPlayback() {
+  isPlaying = true;
+  lastFrameTime = performance.now();
+  animate();
+}
+
+function stopPlayback() {
+  isPlaying = false;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+}
+
+function animate(timestamp) {
+  if (!isPlaying) return;
+
+  if (!timestamp) timestamp = performance.now();
+  const elapsed = timestamp - lastFrameTime;
+  const interval = BASE_INTERVAL / playSpeed;
+
+  if (elapsed >= interval) {
+    lastFrameTime = timestamp;
+    if (currentYear < 439) {
+      currentYear++;
+      slider.value = currentYear;
+      updateMap(currentYear);
+    } else {
+      stopPlayback();
+      document.getElementById('btn-play').textContent = '▶';
+      return;
+    }
+  }
+
+  animationId = requestAnimationFrame(animate);
+}
+
+// Speed control - click speed label to cycle
+document.getElementById('speed-label').addEventListener('click', () => {
+  const speeds = [0.5, 1, 2, 3, 5, 10];
+  const idx = speeds.indexOf(playSpeed);
+  playSpeed = speeds[(idx + 1) % speeds.length];
+  document.getElementById('speed-label').textContent = playSpeed + 'x';
+});
+
+// Keyboard controls
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'ArrowLeft':
+      if (currentYear > 304) { currentYear--; slider.value = currentYear; updateMap(currentYear); }
+      break;
+    case 'ArrowRight':
+      if (currentYear < 439) { currentYear++; slider.value = currentYear; updateMap(currentYear); }
+      break;
+    case ' ':
+      e.preventDefault();
+      document.getElementById('btn-play').click();
+      break;
+    case 'ArrowUp':
+      if (currentYear + 5 <= 439) { currentYear += 5; slider.value = currentYear; updateMap(currentYear); }
+      break;
+    case 'ArrowDown':
+      if (currentYear - 5 >= 304) { currentYear -= 5; slider.value = currentYear; updateMap(currentYear); }
+      break;
+  }
+});
+
+// Mouse wheel over map changes year
+let wheelAccumulator = 0;
+map.on('wheel', (e) => {
+  if (e.originalEvent.ctrlKey || e.originalEvent.metaKey) return; // Allow zoom
+  wheelAccumulator += e.originalEvent.deltaY > 0 ? 1 : -1;
+  if (Math.abs(wheelAccumulator) >= 3) {
+    const delta = wheelAccumulator > 0 ? 1 : -1;
+    wheelAccumulator = 0;
+    const newYear = Math.max(304, Math.min(439, currentYear + delta));
+    if (newYear !== currentYear) {
+      currentYear = newYear;
+      slider.value = currentYear;
+      updateMap(currentYear);
+    }
+  }
+});
+
+// Tooltip on hover
+const tooltip = document.getElementById('tooltip');
+map.on('mousemove', (e) => {
+  tooltip.style.left = (e.originalEvent.clientX + 15) + 'px';
+  tooltip.style.top = (e.originalEvent.clientY - 10) + 'px';
+});
+
+map.on('mouseover', (e) => {
+  // Find which regime polygon is under cursor
+  // Leaflet handles this through feature mouseover
+});
+
+// Add a scale bar for reference
+L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+
+// --- Quick-jump buttons for key years ---
+const KEY_YEARS = [
+  { year: 304, label: '304 开端' },
+  { year: 311, label: '311 永嘉' },
+  { year: 316, label: '316 西晋亡' },
+  { year: 329, label: '329 后赵统北' },
+  { year: 347, label: '347 灭成汉' },
+  { year: 350, label: '350 冉魏' },
+  { year: 352, label: '352 前燕入中原' },
+  { year: 370, label: '370 前秦灭燕' },
+  { year: 376, label: '376 前秦巅峰' },
+  { year: 383, label: '383 淝水之战' },
+  { year: 394, label: '394 后燕灭西燕' },
+  { year: 407, label: '407 胡夏·北燕' },
+  { year: 417, label: '417 刘裕北伐' },
+  { year: 431, label: '431 夏灭秦' },
+  { year: 439, label: '439 北魏统一' },
+];
+
+const quickJumpContainer = document.getElementById('quick-jumps');
+KEY_YEARS.forEach(k => {
+  const btn = document.createElement('button');
+  btn.textContent = k.label;
+  btn.style.cssText = 'font-size:10px;padding:2px 7px;border-radius:12px;border:1px solid rgba(240,230,211,0.25);background:rgba(26,26,46,0.8);color:#c0b090;cursor:pointer;white-space:nowrap;transition:all 0.2s;';
+  btn.onmouseenter = () => { btn.style.borderColor = '#f0c060'; btn.style.color = '#f0c060'; };
+  btn.onmouseleave = () => { btn.style.borderColor = 'rgba(240,230,211,0.25)'; btn.style.color = '#c0b090'; };
+  btn.onclick = () => {
+    currentYear = k.year;
+    slider.value = currentYear;
+    updateMap(currentYear);
+  };
+  quickJumpContainer.appendChild(btn);
+});
+
+// Initialize the map with year 304
+updateMap(304);
+
+// Usage instructions
+console.log('═══════════════════════════════════════');
+console.log('  五胡乱华时期势力变化地图 (304-439)');
+console.log('═══════════════════════════════════════');
+console.log('操作说明:');
+console.log('  拖拽底部滑块 — 切换年份');
+console.log('  ← → 方向键 — 前后一年');
+console.log('  ↑ ↓ 方向键 — 前后五年');
+console.log('  空格键 — 播放/暂停动画');
+console.log('  鼠标滚轮(地图上) — 切换年份');
+console.log('  Ctrl+滚轮 — 缩放地图');
+console.log('  点击图例 — 聚焦到政权');
+console.log('  点击领土 — 聚焦到政权');
+console.log('  悬停领土/都城 — 显示详情');
+console.log('  点击速度标签(1x) — 切换播放速度');
+console.log('  底部快捷按钮 — 跳转关键年份');
+console.log('═══════════════════════════════════════');
+</script>
+</body>
+</html>
