@@ -867,119 +867,257 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.
 }).addTo(map);
 
 // ================================================================
-// MODERN CHINA PROVINCIAL BOUNDARIES (simplified reference overlay)
+// HISTORICAL ADMINISTRATIVE DIVISIONS (州) PER REGIME
 // ================================================================
-// Each entry: [label, [[lng,lat], ...], labelPos [lng,lat]]
-// Drawn as dashed grey lines for modern geographic reference
-function provinceBorder(coords, name, lngLat) {
-  L.polyline(coords.map(([lng,lat])=>[lat,lng]), {
-    color: '#555', weight: 1.0, opacity: 0.55, dashArray: '5,6',
-    interactive: false,
-  }).addTo(map);
-  if (name && lngLat) {
-    L.marker([lngLat[1], lngLat[0]], {
-      icon: L.divIcon({
-        className: 'geo-label',
-        html: `<div style="color:#888;font-size:9px;font-weight:normal;text-shadow:0 0 3px #fff;">${name}</div>`,
-        iconSize: [50, 14], iconAnchor: [25, 7],
-      }),
-      interactive: false,
-    }).addTo(map);
-  }
-}
+// Each regime's key 州 (zhou/province) seats with period-correct names.
+// 州 locations follow the historical administrative geography of
+// the Sixteen Kingdoms period, per 魏俊杰《十六国疆域与政区研究》and
+// 谭其骧《中国历史地图集》第四册.
 
-// Hebei / Shanxi border (Taihang watershed)
-provinceBorder([
-  [113.6,35.0],[113.8,35.8],[114.0,36.5],[114.2,37.5],[114.3,38.5],[114.5,39.2],[114.8,39.8],[115.0,40.5]
-], '河北','');
+const DIVISIONS = {
 
-// Shanxi / Shaanxi border (Yellow River)
-provinceBorder([
-  [110.5,34.6],[110.5,35.3],[110.6,36.0],[110.6,36.8],[110.8,37.5],[111.0,38.2],[111.2,39.0],[111.0,39.5]
-], '','');
+  // 汉赵/前赵 (304-329)
+  hanzhao: [
+    {n:'司隶',lng:111.5,lat:36.1},  // 平阳
+    {n:'雍州',lng:108.9,lat:34.3},  // 长安
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'幽州',lng:110.9,lat:36.9},  // 离石
+    {n:'冀州',lng:110.8,lat:35.2},  // 猗氏
+    {n:'殷州',lng:113.2,lat:36.0},  // 获嘉
+    {n:'卫州',lng:114.0,lat:35.7},  // 朝歌
+  ],
 
-// Shaanxi / Gansu / Ningxia borders
-provinceBorder([
-  [107.0,33.0],[106.8,33.8],[106.5,34.5],[106.3,35.2],[106.0,36.0],[105.5,36.8],[105.0,37.5]
-], '','');
+  // 后赵 (319-351)
+  houzhao: [
+    {n:'司州',lng:114.6,lat:36.3},  // 邺城
+    {n:'雍州',lng:108.9,lat:34.3},  // 长安
+    {n:'洛州',lng:112.5,lat:34.6},  // 洛阳
+    {n:'豫州',lng:113.8,lat:34.0},  // 许昌
+    {n:'兖州',lng:115.8,lat:35.5},  // 廪丘
+    {n:'冀州',lng:115.7,lat:37.7},  // 信都
+    {n:'幽州',lng:116.4,lat:39.9},  // 蓟
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'青州',lng:118.5,lat:36.7},  // 广固
+    {n:'徐州',lng:117.2,lat:34.3},  // 彭城
+    {n:'荆州',lng:112.5,lat:33.0},  // 宛
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水
+    {n:'营州',lng:120.2,lat:41.5},  // 令支
+  ],
 
-// Gansu / Qinghai border (Qilian Mountains)
-provinceBorder([
-  [103.0,37.0],[102.0,37.5],[101.0,38.0],[100.0,38.5],[99.0,39.0],[97.5,39.5],[96.0,40.0]
-], '','');
+  // 成汉 (304-347)
+  chenghan: [
+    {n:'益州',lng:104.1,lat:30.7},  // 成都
+    {n:'梁州',lng:107.0,lat:33.1},  // 汉中
+    {n:'荆州',lng:105.0,lat:29.0},  // 江阳
+    {n:'宁州',lng:102.7,lat:25.0},  // 滇池
+    {n:'汉州',lng:106.5,lat:31.5},  // 宕渠
+  ],
 
-// Henan / Hebei border
-provinceBorder([
-  [110.5,36.0],[111.5,36.0],[112.5,36.0],[113.5,36.0],[114.5,36.0],[115.5,36.0],[116.5,36.0]
-], '','');
+  // 前凉 (320-376)
+  qianliang: [
+    {n:'凉州',lng:102.6,lat:37.9},  // 姑臧
+    {n:'河州',lng:103.8,lat:36.1},  // 金城→枹罕
+    {n:'沙州',lng:94.7,lat:40.1},  // 敦煌
+    {n:'商州',lng:101.5,lat:38.5},  // (侨置)
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水(间)
+  ],
 
-// Henan / Hubei border (south Henan)
-provinceBorder([
-  [110.5,32.5],[111.5,32.3],[112.5,32.2],[113.5,32.2],[114.5,32.0],[115.5,31.8],[116.5,31.8]
-], '','');
+  // 前燕 (337-370)
+  qianyan: [
+    {n:'中州',lng:114.6,lat:36.3},  // 邺城
+    {n:'幽州',lng:116.4,lat:39.9},  // 蓟
+    {n:'平州',lng:120.4,lat:41.6},  // 龙城
+    {n:'冀州',lng:115.7,lat:37.7},  // 信都
+    {n:'青州',lng:118.5,lat:36.7},  // 广固
+    {n:'兖州',lng:115.5,lat:35.5},  // 鄄城
+    {n:'豫州',lng:113.8,lat:34.0},  // 许昌
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'洛州',lng:112.5,lat:34.6},  // 洛阳
+    {n:'徐州',lng:117.2,lat:34.3},  // 彭城
+    {n:'荆州',lng:112.5,lat:33.0},  // 鲁阳
+  ],
 
-// Shandong / Hebei border
-provinceBorder([
-  [115.5,37.0],[116.0,37.2],[116.5,37.5],[117.0,37.8],[117.5,38.0],[118.0,37.8],[118.5,37.5],[119.0,37.5],[120.0,37.8],[121.0,38.0]
-], '','');
+  // 代国 (315-376)
+  dai: [
+    {n:'盛乐',lng:111.8,lat:40.3},  // 都城(代国以部落制为主)
+    {n:'平城',lng:113.3,lat:40.1},  // 南都
+  ],
 
-// Shandong / Henan border
-provinceBorder([
-  [114.8,35.0],[115.2,34.8],[115.8,34.8],[116.5,34.8],[117.0,35.0]
-], '','');
+  // 冉魏 (350-352)
+  ranwei: [
+    {n:'司州',lng:114.6,lat:36.3},  // 邺城
+  ],
 
-// Jiangsu / Anhui border
-provinceBorder([
-  [116.5,34.0],[116.8,33.3],[117.2,32.5],[117.8,32.0],[118.2,31.5]
-], '','');
+  // 前秦 (350-394)
+  qianqin: [
+    {n:'司隶',lng:108.9,lat:34.3},  // 长安
+    {n:'雍州',lng:107.8,lat:35.2},  // 安定
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水
+    {n:'河州',lng:103.3,lat:35.6},  // 枹罕
+    {n:'凉州',lng:102.6,lat:37.9},  // 姑臧
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'冀州',lng:114.6,lat:36.3},  // 邺城
+    {n:'青州',lng:118.5,lat:36.7},  // 广固
+    {n:'幽州',lng:116.4,lat:39.9},  // 蓟
+    {n:'豫州',lng:112.5,lat:34.6},  // 洛阳
+    {n:'兖州',lng:115.8,lat:35.5},  // 廪丘
+    {n:'益州',lng:104.1,lat:30.7},  // 成都
+    {n:'梁州',lng:107.0,lat:33.1},  // 汉中
+    {n:'宁州',lng:102.7,lat:25.0},  // 滇池
+    {n:'荆州',lng:112.2,lat:32.1},  // 襄阳
+    {n:'徐州',lng:117.2,lat:34.3},  // 彭城
+    {n:'扬州',lng:117.9,lat:33.5},  // 下邳
+  ],
 
-// Anhui / Hubei border
-provinceBorder([
-  [115.5,31.8],[115.8,31.2],[116.2,30.8],[116.8,30.5],[117.2,30.0]
-], '','');
+  // 西燕 (384-394)
+  xiyan: [
+    {n:'司州',lng:112.9,lat:36.1},  // 长子
+    {n:'雍州',lng:111.2,lat:35.2},  // 闻喜
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'冀州',lng:113.1,lat:36.2},  // 上党(壶关)
+  ],
 
-// Sichuan Basin outline (northern: Qinling, eastern: Wushan)
-provinceBorder([
-  [104.5,33.0],[105.0,32.8],[106.0,32.5],[107.0,32.2],[108.0,32.0],[109.0,31.5],[110.0,30.5]
-], '','');
+  // 后燕 (384-407)
+  houyan: [
+    {n:'司州',lng:115.0,lat:38.5},  // 中山
+    {n:'幽州',lng:120.4,lat:41.6},  // 龙城
+    {n:'冀州',lng:115.7,lat:37.7},  // 信都
+    {n:'青州',lng:118.5,lat:36.7},  // 广固(间)
+    {n:'兖州',lng:114.3,lat:35.7},  // 滑台
+    {n:'豫州',lng:112.5,lat:34.6},  // 洛阳
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'徐州',lng:114.5,lat:35.5},  // 黎阳(间)
+    {n:'雍州',lng:112.9,lat:36.1},  // 长子(间)
+    {n:'平州',lng:119.0,lat:41.0},  // 平郭
+    {n:'营州',lng:120.2,lat:41.5},  // 令支
+  ],
 
-// Sichuan / Yunnan / Guizhou borders
-provinceBorder([
-  [102.0,29.0],[103.0,28.5],[104.0,28.0],[105.0,27.5],[106.0,27.0]
-], '','');
+  // 翟魏 (388-392)
+  zhaiwei: [
+    {n:'滑台',lng:114.3,lat:35.7},
+  ],
 
-// Inner Mongolia / Mongolia border (northern boundary reference)
-provinceBorder([
-  [106.0,42.0],[108.0,42.0],[110.0,42.5],[112.0,43.0],[114.0,43.5],[116.0,44.0],[118.0,44.5],[120.0,45.0],[122.0,45.5]
-], '','');
+  // 后秦 (384-417)
+  houqin: [
+    {n:'司隶',lng:108.9,lat:34.3},  // 长安
+    {n:'雍州',lng:107.8,lat:35.2},  // 安定
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水
+    {n:'凉州',lng:102.6,lat:37.9},  // 姑臧
+    {n:'河州',lng:103.3,lat:35.6},  // 枹罕
+    {n:'并州',lng:110.4,lat:34.8},  // 蒲坂
+    {n:'冀州',lng:110.7,lat:35.3},  // 河东(安邑)
+    {n:'豫州',lng:112.5,lat:34.6},  // 洛阳
+    {n:'兖州',lng:114.8,lat:34.8},  // 仓垣
+    {n:'徐州',lng:114.8,lat:33.3},  // 项城
+    {n:'荆州',lng:110.0,lat:33.7},  // 上洛
+    {n:'梁州',lng:107.0,lat:33.1},  // 汉中(南郑)
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水
+  ],
 
-// Liaoning / Hebei border
-provinceBorder([
-  [119.0,40.0],[119.3,40.3],[119.8,40.5],[120.5,40.8],[121.0,41.0],[122.0,41.2],[123.0,41.5],[124.0,41.8]
-], '','');
+  // 西秦 (385-431)
+  xiqin: [
+    {n:'秦州',lng:103.3,lat:35.6},  // 枹罕
+    {n:'凉州',lng:102.4,lat:36.5},  // 乐都
+    {n:'河州',lng:103.8,lat:36.1},  // 金城
+    {n:'沙州',lng:101.5,lat:37.0},  // (间)
+  ],
 
-// Xinjiang / Gansu border
-provinceBorder([
-  [93.0,42.0],[93.5,41.0],[94.0,40.0],[94.5,39.5],[95.0,39.0],[95.5,38.5]
-], '','');
+  // 后凉 (386-403)
+  houliang: [
+    {n:'凉州',lng:102.6,lat:37.9},  // 姑臧
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水(间)
+    {n:'河州',lng:103.3,lat:35.6},  // 枹罕(间)
+  ],
 
-// Province LABELS — placed at approximate geographic centers
-const PROVINCE_LABELS = [
-  ['河北',115.0,38.5],['山西',112.2,37.5],['陕西',108.8,35.5],['甘肃',103.5,38.5],
-  ['河南',113.5,34.2],['山东',118.0,36.2],['湖北',113.0,31.0],['安徽',117.0,32.5],
-  ['江苏',119.5,33.0],['四川',104.0,30.5],['辽宁',122.5,41.5],['内蒙古',113.0,42.5],
-  ['青海',98.0,37.0],['宁夏',106.0,37.5],
-];
-PROVINCE_LABELS.forEach(([name,lng,lat])=>{
-  L.marker([lat,lng],{
-    icon: L.divIcon({
-      className: 'geo-label',
-      html: `<div style="color:#777;font-size:12px;font-weight:bold;text-shadow:0 0 5px #fff,0 0 5px #fff;">${name}</div>`,
-      iconSize: [60,18], iconAnchor: [30,9],
-    }),
-    interactive: false,
-  }).addTo(map);
-});
+  // 南凉 (397-414)
+  nanliang: [
+    {n:'凉州',lng:102.4,lat:36.5},  // 乐都→姑臧
+    {n:'河州',lng:103.8,lat:36.1},  // 金城(间)
+    {n:'湟河',lng:101.8,lat:36.6},  // 西平(间)
+  ],
+
+  // 北凉 (397-439)
+  beiliang: [
+    {n:'凉州',lng:100.5,lat:38.9},  // 张掖→姑臧
+    {n:'秦州',lng:102.6,lat:37.9},  // 姑臧(后)
+    {n:'沙州',lng:98.5,lat:39.7},  // 酒泉(间)
+  ],
+
+  // 西凉 (400-421)
+  xiliang: [
+    {n:'凉州',lng:94.7,lat:40.1},  // 敦煌→酒泉
+    {n:'沙州',lng:94.7,lat:40.1},  // 敦煌
+  ],
+
+  // 南燕 (398-410)
+  nanyan: [
+    {n:'司州',lng:118.5,lat:36.7},  // 广固
+    {n:'青州',lng:118.7,lat:36.4},  // 东阳
+    {n:'兖州',lng:117.1,lat:35.9},  // 梁父
+    {n:'徐州',lng:118.8,lat:35.6},  // 莒
+    {n:'并州',lng:117.5,lat:36.0},  // 阴平(侨置)
+    {n:'幽州',lng:119.0,lat:35.8},  // 发干(侨置)
+  ],
+
+  // 北燕 (407-436)
+  beiyan: [
+    {n:'司州',lng:120.4,lat:41.6},  // 龙城
+    {n:'幽州',lng:118.8,lat:40.0},  // 令支
+    {n:'冀州',lng:119.2,lat:40.3},  // 肥如
+    {n:'并州',lng:120.0,lat:41.3},  // 白狼
+    {n:'平州',lng:122.0,lat:41.5},  // 辽东(间)
+  ],
+
+  // 胡夏 (407-431)
+  huxia: [
+    {n:'幽州',lng:108.8,lat:37.6},  // 统万城
+    {n:'雍州',lng:108.9,lat:34.3},  // 长安
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水
+    {n:'并州',lng:110.4,lat:34.8},  // 蒲坂
+    {n:'凉州',lng:107.8,lat:37.5},  // 安定(间)
+    {n:'豫州',lng:109.5,lat:36.0},  // (间)
+    {n:'荆州',lng:110.0,lat:33.7},  // 上洛
+    {n:'朔州',lng:109.0,lat:38.5},  // 三城
+  ],
+
+  // 北魏 (386-439)
+  beiwei: [
+    {n:'司州',lng:113.3,lat:40.1},  // 平城
+    {n:'并州',lng:112.5,lat:37.9},  // 晋阳
+    {n:'雍州',lng:108.9,lat:34.3},  // 长安
+    {n:'秦州',lng:105.7,lat:34.6},  // 天水
+    {n:'凉州',lng:102.6,lat:37.9},  // 姑臧
+    {n:'河州',lng:103.3,lat:35.6},  // 枹罕
+    {n:'幽州',lng:116.4,lat:39.9},  // 蓟
+    {n:'冀州',lng:115.7,lat:37.7},  // 信都
+    {n:'定州',lng:115.0,lat:38.5},  // 中山
+    {n:'相州',lng:114.6,lat:36.3},  // 邺城
+    {n:'豫州',lng:112.5,lat:34.6},  // 洛阳
+    {n:'兖州',lng:115.5,lat:35.5},  // 鄄城
+    {n:'青州',lng:118.5,lat:36.7},  // 广固
+    {n:'徐州',lng:117.2,lat:34.3},  // 彭城
+    {n:'荆州',lng:112.5,lat:33.0},  // 鲁阳(间)
+    {n:'营州',lng:120.4,lat:41.6},  // 龙城
+    {n:'平州',lng:122.0,lat:41.5},  // 辽东(间)
+  ],
+
+  // 东晋 (317-420)
+  jin: [
+    {n:'扬州',lng:118.8,lat:32.1},  // 建康
+    {n:'荆州',lng:112.2,lat:30.3},  // 江陵
+    {n:'江州',lng:115.9,lat:29.7},  // 寻阳
+    {n:'豫州',lng:116.8,lat:32.5},  // 寿春
+    {n:'徐州',lng:119.4,lat:32.2},  // 京口
+    {n:'兖州',lng:117.2,lat:33.0},  // 淮北(侨置)
+    {n:'益州',lng:104.1,lat:30.7},  // 成都(间)
+    {n:'梁州',lng:107.0,lat:33.1},  // 汉中(间)
+    {n:'宁州',lng:102.7,lat:25.0},  // 滇池(间)
+    {n:'广州',lng:113.3,lat:23.1},  // 番禺
+    {n:'交州',lng:105.9,lat:21.0},  // 龙编
+    {n:'湘州',lng:113.0,lat:28.2},  // 长沙(间)
+    {n:'南豫州',lng:118.3,lat:31.7},  // 姑孰(侨置)
+  ],
+};
 
 // Rivers - detailed courses [lng, lat]
 function river(coords, name, color, w) {
@@ -1062,7 +1200,9 @@ Object.keys(R).forEach(id=>{
     icon:L.divIcon({className:'rlabel',html:'',iconSize:[90,22],iconAnchor:[45,26]}),
     interactive:false,
   });
-  regimeLayers[id]={polygon:gl,capital:cm,capLabel:cl};
+  // Division labels (historical 州 names)
+  const divMarkers = [];
+  regimeLayers[id]={polygon:gl,capital:cm,capLabel:cl,divMarkers};
 });
 
 // ================================================================
@@ -1125,6 +1265,24 @@ function updateMap(year){
           html:`<div style="font-size:10px;font-weight:bold;text-shadow:0 0 5px #000,0 0 5px #000;">${rd.name}</div>`,
           iconSize:[90,22],iconAnchor:[45,11],
         }));
+        // Division labels (historical 州)
+        const divs = DIVISIONS[id] || [];
+        // Remove old div markers
+        l.divMarkers.forEach(m=>{if(map.hasLayer(m))map.removeLayer(m);});
+        l.divMarkers.length = 0;
+        divs.forEach(d=>{
+          const dm = L.marker([d.lat,d.lng],{
+            icon: L.divIcon({
+              className: 'geo-label',
+              html: `<div style="color:${rd.color};font-size:9px;font-weight:bold;text-shadow:0 0 4px #000,0 0 4px #000;opacity:0.85;">${d.n}</div>`,
+              iconSize: [50,14], iconAnchor: [25,7],
+            }),
+            interactive: false,
+          });
+          dm.addTo(map);
+          l.divMarkers.push(dm);
+        });
+
         if(!map.hasLayer(l.capital))l.capital.addTo(map);
         if(!map.hasLayer(l.capLabel))l.capLabel.addTo(map);
         if(!map.hasLayer(l.polygon))l.polygon.addTo(map);
@@ -1133,6 +1291,8 @@ function updateMap(year){
       if(map.hasLayer(l.polygon))map.removeLayer(l.polygon);
       if(map.hasLayer(l.capital))map.removeLayer(l.capital);
       if(map.hasLayer(l.capLabel))map.removeLayer(l.capLabel);
+      l.divMarkers.forEach(m=>{if(map.hasLayer(m))map.removeLayer(m);});
+      l.divMarkers.length = 0;
     }
   });
 
