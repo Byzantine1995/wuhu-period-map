@@ -854,9 +854,9 @@ const map = L.map('map', {
   zoomControl: true, attributionControl: false,
 });
 
-// Base map — OpenStreetMap standard (modern cities, roads, admin boundaries)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+// Base map — pure terrain/geography, no modern political boundaries
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, Esri',
   maxZoom: 9,
 }).addTo(map);
 
